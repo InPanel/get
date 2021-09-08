@@ -2,9 +2,12 @@
 #
 #   InPanel Installer Script
 #
+#   Copyright (c) 2021, Jackson Dou
+#   All rights reserved.
+#
 #   GitHub: https://github.com/inpanel/get
 #   Issues: https://github.com/inpanel/get/issues
-#   Requires: bash, mv, rm, tr, type, grep, sed, curl/wget, tar (or unzip on OSX and Windows)
+#   Requires: bash, cp, rm, tr, type, grep, sed, curl/wget, tar (or unzip on OSX and Windows)
 #
 #   This script installs InPanel to your path.
 #   Usage:
@@ -18,6 +21,8 @@
 #
 #   This should work on Linux, Mac, and BSD systems, and hopefully Windows with Cygwin. Please open an issue if you notice any bugs.
 #
+#   This script is distributed under the terms of the MIT License.
+#   The full license can be found in 'LICENSE'.
 
 # Check if user is root
 if [ $(id -u) != "0" ]; then
