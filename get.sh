@@ -98,6 +98,12 @@ function init_system_info() {
 function fun_dependent() {
     echo '[INPANEL]: Install Dependents...'
     yum install -y -q wget net-tools vim psmisc rsync libxslt-devel GeoIP GeoIP-devel gd gd-devel python2
+
+    python_path=$(which python)
+    if [ ! $python_path ]; then
+        python2_path=$(which python2)
+        ln -s "${python2_path}" /usr/bin/python
+    fi
 }
 
 # 下载安装包到指定位置
