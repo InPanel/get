@@ -24,85 +24,70 @@
 #   This script is distributed under the terms of the MIT License.
 #   The full license can be found in 'LICENSE'.
 
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+GREENS='\033[5;32m'
+BLUE='\033[1;34m'
+DARK='\033[1;30m'
+NC='\033[0m'
+INP='[\033[1;30mINPANEL\033[0m]'
+
 # Check if user is root
 if [ $(id -u) != "0" ]; then
-    echo '[INPANEL]: Aborted, must be run as root'
+    echo "${INP}: ${RED}Aborted, must be run as root${NC}"
     exit 1
 fi
 
-# 默认值
-initd_script='/etc/init.d/inpanel'
-work_path='/usr/local/inpanel'
-work_port=8888
+inpanel_bin='/usr/local/bin/inpanel'
+inpanel_path='/usr/local/inpanel'
+inpanel_port=8888
 ipaddress="0.0.0.0"
 username='admin'
 password='admin'
 repository='https://github.com/inpanel/inpanel'
 
-system_os="unsupported"
-system_arch="unknown"
+system_os="Unsupported"
+system_arch="Unknown"
 
 download_file_tag="v1.1.1b25"
 download_file_ext=".tar.gz"
 
-echo '[INPANEL]: ===========START============'
+echo "${INP}: ===========${DARK}START${NC}============"
 
 # 系统信息 OS and version
 function init_system_info() {
     # NOTE: `uname -m` is more accurate and universal than `arch`
     # See https://en.wikipedia.org/wiki/Uname
-    unamem="$(uname -m)"
-    case $unamem in
-    *aarch64*)
-        system_arch="arm64"
-        ;;
-    *64*)
-        system_arch="amd64"
-        ;;
-    *86*)
-        system_arch="386"
-        ;;
-    *armv5*)
-        system_arch="armv5"
-        ;;
-    *armv6*)
-        system_arch="armv6"
-        ;;
-    *armv7*)
-        system_arch="armv7"
-        ;;
-    *)
-        echo "[INPANEL]: Aborted, unsupported or unknown architecture: $unamem"
-        return 2
-        ;;
-    esac
-
-    unameu="$(tr '[:lower:]' '[:upper:]' <<<$(uname))"
-    if [[ $unameu == *DARWIN* ]]; then
-        system_os="Darwin"
-    elif [[ $unameu == *LINUX* ]]; then
-        system_os="Linux"
-    elif [[ $unameu == *FREEBSD* ]]; then
-        system_os="FreeBSD"
-    elif [[ $unameu == *NETBSD* ]]; then
-        system_os="NetBSD"
-    elif [[ $unameu == *OPENBSD* ]]; then
-        system_os="OpenBSD"
-    elif [[ $unameu == *WIN* || $unameu == MSYS* ]]; then
-        # Should catch cygwin
-        system_os="Windows"
-        download_file_ext=".zip"
+    uname_s="$(uname)"
+    if [ $uname_s ]; then
+        system_os=$uname_s
     else
-        echo "[INPANEL]: Aborted, unsupported or unknown OS: $uname"
+        echo "${INP}: Unsupported or unknown OS: ${uname_s}"
         return 6
     fi
-    echo "[INPANEL]: System: $system_os $system_arch"
+
+    uname_m="$(uname -m)"
+    if [ $uname_m ]; then
+        system_arch=$uname_m
+    else
+        echo "${INP}: Unsupported or unknown architecture: ${uname_m}"
+    fi
+
+    uname_r="$(uname -r)"
+    echo "${INP}: System: $system_os $system_arch $uname_r"
 }
 
 # 安装依赖
 function fun_dependent() {
-    echo '[INPANEL]: Install Dependents...'
-    yum install -y -q wget net-tools vim psmisc rsync libxslt-devel GeoIP GeoIP-devel gd gd-devel python2
+    if [ -f /usr/bin/yum ]; then
+        echo "${INP}: Install Dependents..."
+        yum install -y -q wget net-tools vim psmisc rsync libxslt-devel GeoIP GeoIP-devel gd gd-devel python2
+    # elif [ -f /usr/bin/apt-get ]; then
+    #     apt-get install -y wget net-tools vim psmisc rsync libxslt-devel GeoIP GeoIP-devel gd gd-devel python2
+    else
+        echo "${INP}: Aborted, ${RED}Unsupported!${NC}"
+        exit 2
+    fi
 
     python_path=$(which python)
     if [ ! $python_path ]; then
@@ -118,7 +103,7 @@ function fun_download() {
     elif type -p wget >/dev/null 2>&1; then
         download_get='wget -qO-'
     else
-        echo '[INPANEL]: Aborted, could not find curl or wget'
+        echo "${INP}: Aborted, could not find curl or wget"
         return 7
     fi
 
@@ -127,43 +112,52 @@ function fun_download() {
     # download_file_url="${repository}/releases/download/${download_file_tag}${download_file_ext}"
     download_file_url="${repository}/archive/refs/tags/${download_file_tag}${download_file_ext}"
 
-    echo '[INPANEL]: Download Latest InPanel'
-    echo "[INPANEL]: Version:    ${download_file_tag}"
-    echo "[INPANEL]: URL:        $download_file_url"
-    echo "[INPANEL]: Directory:  ${work_path}"
+    echo "${INP}: Download Latest InPanel"
+    echo "${INP}: Version:    ${download_file_tag}"
+    echo "${INP}: URL:        $download_file_url"
+    echo "${INP}: Directory:  ${inpanel_path}"
 
     # 检查文件夹/创建
-    test ! -d "${work_path}" && mkdir "${work_path}"
+    test ! -d "${inpanel_path}" && mkdir "${inpanel_path}"
 
-    echo '[INPANEL]: Downloading...'
-    ${download_get} "$download_file_url" | tar zx -C "${work_path}" --strip-components 1
+    echo "${INP}: Downloading..."
+    ${download_get} "$download_file_url" | tar zx -C "${inpanel_path}" --strip-components 1
 
     # 添加执行权限
-    if [ -f "${work_path}"/config.py ]; then
-        chmod +x "${work_path}"/config.py
+    if [ -f "${inpanel_path}"/config.py ]; then
+        chmod +x "${inpanel_path}"/config.py
     fi
-    if [ -f "${work_path}"/server.py ]; then
-        chmod +x "${work_path}"/server.py
+    if [ -f "${inpanel_path}"/server.py ]; then
+        chmod +x "${inpanel_path}"/server.py
     fi
+    # link bin
+    if [ -f "${inpanel_bin}" ]; then
+        rm -f "${inpanel_bin}"
+    fi
+    ln -s "${inpanel_path}"/scripts/init.d/centos/inpanel $inpanel_bin
+    # cp "${inpanel_path}"/scripts/init.d/centos/inpanel $inpanel_bin
+    chmod +x "${inpanel_bin}"
+    echo "${INP}: Daemon:     ${inpanel_bin}"
 }
 
 # 设置账号
 function fun_set_username() {
-    read -p "[INPANEL]: Enter Admin Username [default: ${username}]: " in_name
+    printf "${INP}: Enter Admin Username [default: ${username}]: "
+    read in_name
     if [ $in_name ]; then
         username=$in_name
     fi
-    echo "[INPANEL]: Admin Username is: ${username}"
+    echo "${INP}: Admin Username is: ${BLUE}${username}${NC}"
     # 修改配置
-    if [ -e "${work_path}"/config.py ]; then
-        ${work_path}/config.py username ${username}
-        echo '[INPANEL]: Admin Username Saved.'
+    if [ -e "${inpanel_path}"/config.py ]; then
+        ${inpanel_path}/config.py username ${username}
+        echo "${INP}: Admin Username Saved."
     fi
 }
 
 # 设置密码
 function fun_set_password() {
-    printf "[INPANEL]: Enter Admin Password [default: ${password}]: "
+    printf "${INP}: Enter Admin Password [default: ${password}]: "
 
     # 使用 while 循环隐式地从标准输入每次读取一个字符，且反斜杠不做转义字符处理
     # 然后将读取的字符赋值给变量 in_pwd
@@ -189,49 +183,50 @@ function fun_set_password() {
         password=$password_input
     fi
 
-    echo "[INPANEL]: Admin Password is: ${password}"
+    echo "${INP}: Admin Password is: ${BLUE}${password}${NC}"
     # 修改配置
-    if [ -f "${work_path}"/config.py ]; then
-        "${work_path}"/config.py password "${password}"
-        echo '[INPANEL]: Admin Password Saved.'
+    if [ -f "${inpanel_path}"/config.py ]; then
+        "${inpanel_path}"/config.py password "${password}"
+        echo "${INP}: Admin Password Saved."
     fi
 }
 
 # 设置端口
 function fun_set_port() {
-    read -p "[INPANEL]: Enter Listen Port [default: ${work_port}]: " in_port
+    printf "${INP}: Enter Listen Port [default: ${inpanel_port}]: "
+    read in_port
     if [ $in_port ]; then
-        work_port=$in_port
+        inpanel_port=$in_port
     fi
     # 修改配置
-    if [ -f "${work_path}"/config.py ]; then
-        "${work_path}"/config.py port "${work_port}"
+    if [ -f "${inpanel_path}"/config.py ]; then
+        "${inpanel_path}"/config.py port "${inpanel_port}"
     fi
-    echo "[INPANEL]: Port ${work_port}"
+    echo "${INP}: InPanel Port ${BLUE}${inpanel_port}${NC}"
 }
 
 # 设置防火墙
 function fun_set_firewall() {
-    echo '[INPANEL]: Configure Firewall...'
+    echo "${INP}: Configure Firewall..."
     if [ -f /usr/sbin/ufw ]; then
-        ufw allow "${work_port}"/tcp
-        ufw allow "${work_port}"/udp
+        ufw allow "${inpanel_port}"/tcp
+        ufw allow "${inpanel_port}"/udp
         ufw reload
     fi
 
     # if [ -f /etc/firewalld/firewalld.conf ]; then
-    #     firewall-cmd --permanent --zone=public --add-port="${work_port}"/tcp
+    #     firewall-cmd --permanent --zone=public --add-port="${inpanel_port}"/tcp
     #     systemctl restart firewalld.service
     if [ -f /etc/sysconfig/firewalld ]; then
         default_zone=$(firewall-cmd --get-default-zone)
 
-        firewall-cmd --permanent --zone="${default_zone}" --add-port="${work_port}"/tcp
-        firewall-cmd --permanent --zone="${default_zone}" --add-port="${work_port}"/udp
+        firewall-cmd --permanent --zone="${default_zone}" --add-port="${inpanel_port}"/tcp
+        firewall-cmd --permanent --zone="${default_zone}" --add-port="${inpanel_port}"/udp
         firewall-cmd --reload
     fi
     if [ -f /etc/init.d/iptables ]; then
-        iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport "${work_port}" -j ACCEPT
-        iptables -I INPUT -p udp -m state --state NEW -m udp --dport "${work_port}" -j ACCEPT
+        iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport "${inpanel_port}" -j ACCEPT
+        iptables -I INPUT -p udp -m state --state NEW -m udp --dport "${inpanel_port}" -j ACCEPT
         /etc/init.d/iptables save
     fi
 }
@@ -239,24 +234,24 @@ function fun_set_firewall() {
 # 获取IP地址
 function fun_set_ip() {
     ipaddress=$(curl -s http://ip.42.pl/raw)
-    echo "[INPANEL]: IP ${ipaddress}"
+    echo "${INP}: InPanel IP ${BLUE}${ipaddress}${NC}"
 }
 
 # 成功
 function fun_success() {
-    echo '[INPANEL]:'
-    echo '[INPANEL]: ============================'
-    echo '[INPANEL]: *                          *'
-    echo '[INPANEL]: *     INSTALL COMPLETED    *'
-    echo '[INPANEL]: *                          *'
-    echo '[INPANEL]: ============================'
-    echo '[INPANEL]:'
-    echo '[INPANEL]: The URL of your InPanel is: '
-    echo "[INPANEL]: http://${ipaddress}:${work_port}"
-    echo '[INPANEL]:'
-    echo '[INPANEL]: Wish you a happy life !'
-    echo '[INPANEL]:'
-    echo '[INPANEL]: ============END============='
+    echo "${INP}:"
+    echo "${INP}: ============================"
+    echo "${INP}: *                          *"
+    echo "${INP}: *     ${GREEN}INSTALL COMPLETED${NC}    *"
+    echo "${INP}: *                          *"
+    echo "${INP}: ============================"
+    echo "${INP}:"
+    echo "${INP}: The URL of InPanel is: "
+    echo "${INP}: ${BLUE}http://${ipaddress}:${inpanel_port}${NC}"
+    echo "${INP}:"
+    echo "${INP}: ${GREENS}Wish you a happy life !${NC}"
+    echo "${INP}:"
+    echo "${INP}: ============${DARK}END${NC}============="
 }
 
 init_system_info
