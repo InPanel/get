@@ -135,7 +135,7 @@ function fun_download() {
     # 检查文件夹/创建
     test ! -d "${work_path}" && mkdir "${work_path}"
 
-    echo '[INPANEL]: Download...'
+    echo '[INPANEL]: Downloading...'
     ${download_get} "$download_file_url" | tar zx -C "${work_path}" --strip-components 1
 
     # 添加执行权限
