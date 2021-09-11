@@ -155,6 +155,7 @@ function fun_set_username() {
         ${inpanel_path}/config.py username ${username}
         printf "${INP}: Admin Username Saved.\n"
     fi
+    return username
 }
 
 # 设置密码
@@ -190,6 +191,7 @@ function fun_set_password() {
         "${inpanel_path}"/config.py password "${password}"
         printf "${INP}: Admin Password Saved.\n"
     fi
+    return password
 }
 
 # 设置端口
@@ -204,6 +206,7 @@ function fun_set_port() {
         "${inpanel_path}"/config.py port "${inpanel_port}"
     fi
     printf "${INP}: InPanel Port ${BLUE}${inpanel_port}${NC}\n"
+    return inpanel_port
 }
 
 # 设置防火墙
