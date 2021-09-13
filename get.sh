@@ -40,6 +40,7 @@ if [ $(id -u) != "0" ]; then
 fi
 
 inpanel_bin='/usr/local/bin/inpanel'
+inpanel_init='/etc/init.d/inpanel'
 inpanel_path='/usr/local/inpanel'
 inpanel_port=8888
 ipaddress="0.0.0.0"
@@ -132,14 +133,21 @@ function fun_download() {
     if [ -f "${inpanel_path}"/server.py ]; then
         chmod +x "${inpanel_path}"/server.py
     fi
+    # link init
+    chmod +x "${inpanel_path}"/scripts/init.d/centos/inpanel
+    if [ -f "${inpanel_init}" ]; then
+        rm -f "${inpanel_init}"
+    fi
+    ln -s "${inpanel_path}"/scripts/init.d/centos/inpanel $inpanel_init
+
+    chmod +x "${inpanel_path}"/scripts/bin/inpanel
     # link bin
     if [ -f "${inpanel_bin}" ]; then
         rm -f "${inpanel_bin}"
     fi
-    ln -s "${inpanel_path}"/scripts/init.d/centos/inpanel $inpanel_bin
-    # cp "${inpanel_path}"/scripts/init.d/centos/inpanel $inpanel_bin
-    chmod +x "${inpanel_bin}"
-    printf "${INP}: Daemon:     ${inpanel_bin}\n"
+    ln -s "${inpanel_path}"/scripts/bin/inpanel $inpanel_bin
+
+    printf "${INP}: download successful\n"
 }
 
 # 设置账号
